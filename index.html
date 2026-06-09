@@ -19,13 +19,27 @@
             padding: 20px 15px;
             overflow: hidden;
         }
+        .avatar-container {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            margin-top: 10px;
+        }
         #avatar {
             width: 120px; height: 120px;
             border-radius: 20px;
-            margin-top: 10px;
             object-fit: cover;
             cursor: pointer;
-            transition: transform 0.1s;
+        }
+        #weather-emoji {
+            font-size: 1.5rem;
+            margin-left: -10px;
+            margin-top: 5px;
+            background: #1a1a2e;
+            border-radius: 50%;
+            padding: 2px;
+            z-index: 2;
         }
         h1 {
             font-size: 1.3rem; font-weight: bold;
@@ -81,7 +95,6 @@
             transform: scale(0.95);
         }
 
-        /* 头像抖动动画 */
         @keyframes shake {
             0% { transform: translateX(0); }
             25% { transform: translateX(-5px); }
@@ -96,7 +109,10 @@
 </head>
 <body>
 
-    <img id="avatar" src="elli_avatar.png" alt="Elli">
+    <div class="avatar-container">
+        <img id="avatar" src="elli_avatar.png" alt="Elli">
+        <span id="weather-emoji"></span>
+    </div>
 
     <h1>Elli</h1>
     <div id="status">在听你说话</div>
@@ -121,6 +137,29 @@
         const textInput = document.getElementById("text-input");
         const micBtn = document.getElementById("mic-btn");
 
+        // ========== 天气 ==========
+        async function loadWeather() {
+            try {
+                const loc = await fetch("http://ip-api.com/json/").then(r => r.json());
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current_weather=true`;
+                const w = await fetch(url).then(r => r.json());
+                const code = w.current_weather.weathercode;
+                const emojiMap = {
+                    0: "☀️", 1: "⛅", 2: "⛅", 3: "⛅",
+                    45: "🌫️", 48: "🌫️",
+                    51: "🌧️", 53: "🌧️", 55: "🌧️", 56: "🌧️", 57: "🌧️",
+                    61: "🌧️", 63: "🌧️", 65: "🌧️", 66: "🌧️", 67: "🌧️",
+                    71: "❄️", 73: "❄️", 75: "❄️", 77: "❄️",
+                    80: "🌧️", 81: "🌧️", 82: "🌧️",
+                    95: "⚡", 96: "⚡", 99: "⚡",
+                };
+                document.getElementById("weather-emoji").textContent = emojiMap[code] || "🌈";
+            } catch(e) {
+                document.getElementById("weather-emoji").textContent = "🌈";
+            }
+        }
+        loadWeather();
+
         // ========== 头像切换 ==========
         function setTalking(talking) {
             if (talking) {
@@ -130,9 +169,9 @@
             }
         }
 
-        // ========== 头像双击抖动 ==========
+        // ========== 头像交互：桌面双击 / 手机长按 ==========
         let pressTimer;
-        avatar.addEventListener("touchstart", (e) => {
+        avatar.addEventListener("touchstart", () => {
             pressTimer = setTimeout(() => {
                 avatar.classList.add("avatar-shake");
                 setTimeout(() => avatar.classList.remove("avatar-shake"), 300);
