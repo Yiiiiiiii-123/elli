@@ -147,8 +147,8 @@ def chat():
     history.append({"role": "assistant", "content": reply})
     short_term_memory[session_id] = history
 
-    if any(kw.lower() in user_text.lower() for kw in MEMORY_KEYWORDS):
-        save_memory(user_text)
+    save_memory(f"用户: {user_text}")
+    save_memory(f"Elli: {reply}")
 
 
     return jsonify({"reply": reply})
