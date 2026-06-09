@@ -150,7 +150,7 @@ def chat():
     if any(kw.lower() in user_text.lower() for kw in MEMORY_KEYWORDS):
         save_memory(user_text)
 
-    save_memory("TEST: " + user_text)
+
     return jsonify({"reply": reply})
 
 if __name__ == "__main__":
