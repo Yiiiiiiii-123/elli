@@ -161,14 +161,19 @@
         loadWeather();
 
         // ========== 头像切换 ==========
+        let talkTimer = null;
         function setTalking(talking) {
             if (talking) {
+                // 每次说话都重新加载 APNG，确保从第一帧开始
                 avatar.src = "elli_talk.apng?" + Date.now();
             } else {
                 avatar.src = "elli_avatar.png";
+                if (talkTimer) {
+                    clearTimeout(talkTimer);
+                    talkTimer = null;
+                }
             }
         }
-
         // ========== 头像交互：桌面双击 / 手机长按 ==========
         let pressTimer;
         avatar.addEventListener("touchstart", () => {
@@ -193,22 +198,31 @@
 
         // ========== TTS 播放 ==========
         function speakText(text) {
+            // 估算播放时长：中文约 4 字/秒，德语约 3 词/秒
+            const hasChinese = /[\u4e00-\u9fff]/.test(text);
+            let duration;
+            if (hasChinese) {
+                duration = text.length * 250; // 每字 250ms
+            } else {
+                duration = text.split(/\s+/).length * 350; // 每词 350ms
+            }
+            duration = Math.max(duration, 1500); // 最短 1.5 秒
+            duration = Math.min(duration, 15000); // 最长 15 秒
+
+            // 用定时器控制 APNG，不依赖 TTS 回调
+            setTalking(true);
+            if (talkTimer) clearTimeout(talkTimer);
+            talkTimer = setTimeout(() => setTalking(false), duration);
+
+            // TTS 仍然播放，只是不控制动画
             if (window.speechSynthesis) {
                 window.speechSynthesis.cancel();
                 const utter = new SpeechSynthesisUtterance(text);
-                const hasChinese = /[\u4e00-\u9fff]/.test(text);
                 utter.lang = hasChinese ? "zh-CN" : "de-DE";
                 utter.rate = 1.0;
-                utter.onstart = () => setTalking(true);
-                utter.onend = () => setTalking(false);
-                utter.onerror = () => setTalking(false);
                 window.speechSynthesis.speak(utter);
-            } else {
-                setTalking(true);
-                setTimeout(() => setTalking(false), text.length * 80);
             }
         }
-
         // ========== 调 Render 后端 ==========
         async function getReply(userText) {
             const resp = await fetch(SERVER_URL, {
