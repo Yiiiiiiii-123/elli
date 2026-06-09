@@ -5,51 +5,66 @@ import os
 import requests
 import datetime
 import hashlib
-from supabase import create_client
 
 app = Flask(__name__)
 CORS(app)
 
 # ==================== 配置 ====================
 DS_KEY = os.environ.get("DS_KEY")
-SUPABASE_URL = os.environ.get("SUPABASE_URL")      # Render 环境变量
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")      # Render 环境变量
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 client = OpenAI(api_key=DS_KEY, base_url="https://api.deepseek.com")
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+SUPABASE_HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+}
 
 # ==================== 长期记忆 ====================
-def get_embedding(text):
-    """简单的文本哈希，用于记忆检索（后续可升级为向量）"""
-    return hashlib.md5(text.encode()).hexdigest()[:32]
-
 def save_memory(content):
-    """保存一条记忆到 Supabase"""
     try:
-        supabase.table("memories").insert({
-            "content": content,
-            "embedding": get_embedding(content)
-        }).execute()
-        print(f"记忆已保存: {content[:50]}...")
+        resp = requests.post(
+            f"{SUPABASE_URL}/rest/v1/memories",
+            headers=SUPABASE_HEADERS,
+            json={
+                "content": content,
+                "embedding": hashlib.md5(content.encode()).hexdigest()[:32]
+            }
+        )
+        print(f"Supabase save: {resp.status_code} - {resp.text[:100]}")
     except Exception as e:
-        print(f"保存记忆失败: {e}")
+        print(f"Save memory failed: {e}")
 
 def search_memories(query, limit=3):
-    """搜索相关记忆（全文模糊匹配）"""
     try:
-        result = supabase.table("memories")\
-            .select("content")\
-            .ilike("content", f"%{query}%")\
-            .limit(limit)\
-            .execute()
-        return [r["content"] for r in result.data]
+        resp = requests.get(
+            f"{SUPABASE_URL}/rest/v1/memories",
+            headers=SUPABASE_HEADERS,
+            params={
+                "select": "content",
+                "content": f"ilike.*{query}*",
+                "limit": limit,
+                "order": "created_at.desc"
+            }
+        )
+        if resp.status_code >= 400:
+            print(f"Supabase search error: {resp.text[:100]}")
+            return []
+        return [r["content"] for r in resp.json()]
     except Exception as e:
-        print(f"搜索记忆失败: {e}")
+        print(f"Search memory failed: {e}")
         return []
 
 # ==================== 短期记忆 ====================
 short_term_memory = {}
 MAX_HISTORY = 10
+MEMORY_KEYWORDS = [
+    "我叫", "我是", "我在", "我喜欢", "我住在", "我的", "我讨厌", "我想",
+    "Mein Name", "Ich bin", "Ich wohne", "Ich mag", "Ich hasse", "Meine"
+]
 
 # ==================== 天气 ====================
 def get_weather():
@@ -94,16 +109,6 @@ def get_time_mood():
     else:
         return "🌠 深夜", "很困但还在陪你，语气软软的", 20
 
-# ==================== 自动保存记忆的关键词 ====================
-MEMORY_KEYWORDS = [
-    "我叫", "我是", "我在", "我喜欢", "我住在", "我的", "我讨厌", "我想",
-    "Mein Name", "Ich bin", "Ich wohne", "Ich mag", "Ich hasse", "Meine"
-]
-
-def should_save(text):
-    """判断是否包含需要长期记忆的个人信息"""
-    return any(kw.lower() in text.lower() for kw in MEMORY_KEYWORDS)
-
 # ==================== API 路由 ====================
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -111,16 +116,13 @@ def chat():
     user_text = data.get("text", "")
     session_id = data.get("session", "default")
 
-    # 短期记忆
     if session_id not in short_term_memory:
         short_term_memory[session_id] = []
     history = short_term_memory[session_id]
 
-    # 天气 + 时间
     weather_emoji, mood, temp = get_weather()
     time_emoji, time_mood, energy = get_time_mood()
 
-    # 长期记忆检索
     long_memories = search_memories(user_text, limit=3)
     memory_text = ""
     if long_memories:
@@ -144,13 +146,11 @@ def chat():
     )
     reply = response.choices[0].message.content
 
-    # 保存短期记忆
     history.append({"role": "user", "content": user_text})
     history.append({"role": "assistant", "content": reply})
     short_term_memory[session_id] = history
 
-    # 如果包含个人信息，保存长期记忆
-    if should_save(user_text):
+    if any(kw.lower() in user_text.lower() for kw in MEMORY_KEYWORDS):
         save_memory(user_text)
 
     save_memory("TEST: " + user_text)
