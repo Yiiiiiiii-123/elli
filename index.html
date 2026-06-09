@@ -24,6 +24,8 @@
             border-radius: 20px;
             margin-top: 10px;
             object-fit: cover;
+            cursor: pointer;
+            transition: transform 0.1s;
         }
         h1 {
             font-size: 1.3rem; font-weight: bold;
@@ -78,6 +80,18 @@
         #mic-btn:active {
             transform: scale(0.95);
         }
+
+        /* 头像抖动动画 */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+        .avatar-shake {
+            animation: shake 0.3s ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -97,7 +111,7 @@
     <audio id="audio-player" hidden></audio>
 
     <script>
-        // ========== 配置：改成你电脑的局域网 IP ==========
+        // ========== 配置 ==========
         const SERVER_URL = "https://elli-7mth.onrender.com/chat";
 
         // ========== DOM ==========
@@ -115,6 +129,12 @@
                 avatar.src = "elli_avatar.png";
             }
         }
+
+        // ========== 头像双击抖动 ==========
+        avatar.addEventListener("dblclick", () => {
+            avatar.classList.add("avatar-shake");
+            setTimeout(() => avatar.classList.remove("avatar-shake"), 300);
+        });
 
         // ========== 显示回复 ==========
         function showReply(text) {
@@ -140,7 +160,7 @@
             }
         }
 
-        // ========== 调电脑后端 ==========
+        // ========== 调 Render 后端 ==========
         async function getReply(userText) {
             const resp = await fetch(SERVER_URL, {
                 method: "POST",
@@ -166,7 +186,7 @@
                 speakText(reply);
                 statusDiv.textContent = "在听你说话";
             } catch (e) {
-                showReply("哎呀，网络好像不太稳定，稍后再试嘛～\n(确认电脑已运行 server.py 且手机连同一 WiFi)");
+                showReply("哎呀，网络好像不太稳定，稍后再试嘛～");
                 statusDiv.textContent = "在听你说话";
             }
         }
