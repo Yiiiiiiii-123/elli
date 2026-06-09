@@ -8,8 +8,12 @@ import datetime
 app = Flask(__name__)
 CORS(app)
 
-DS_KEY = os.environ.get("DS_KEY")  # Render 环境变量
+DS_KEY = os.environ.get("DS_KEY")
 client = OpenAI(api_key=DS_KEY, base_url="https://api.deepseek.com")
+
+# ---------- 短期记忆 ----------
+short_term_memory = {}
+MAX_HISTORY = 10
 
 # ---------- 天气 ----------
 def get_weather():
@@ -58,25 +62,38 @@ def get_time_mood():
 def chat():
     data = request.json
     user_text = data.get("text", "")
-    
+    session_id = data.get("session", "default")
+
+    if session_id not in short_term_memory:
+        short_term_memory[session_id] = []
+
+    history = short_term_memory[session_id]
+
     weather_emoji, mood, temp = get_weather()
     time_emoji, time_mood, energy = get_time_mood()
-    
+
     system_prompt = f"""你是 Elli，温柔俏皮的桌面伙伴。
 现在的状态：{time_emoji}，精力值约{energy}%，感觉{time_mood}。
 外面天气{weather_emoji}，温度{temp}°C，心情底色是{mood}。
 你的语气要同时受时段和天气影响。
 六成情绪，四成内容。像朋友聊天。用户用什么语言你就用什么语言回复。
 中文15-60字，德语2-4短句。"""
-    
+
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history[-MAX_HISTORY * 2:])
+    messages.append({"role": "user", "content": user_text})
+
     response = client.chat.completions.create(
         model="deepseek-chat",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_text}
-        ]
+        messages=messages
     )
-    return jsonify({"reply": response.choices[0].message.content})
+    reply = response.choices[0].message.content
+
+    history.append({"role": "user", "content": user_text})
+    history.append({"role": "assistant", "content": reply})
+    short_term_memory[session_id] = history
+
+    return jsonify({"reply": reply})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
