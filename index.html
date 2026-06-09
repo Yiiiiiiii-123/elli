@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Elli</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-family: -apple-system, "Microsoft YaHei", sans-serif;
+            height: 100vh; height: 100dvh;
+            display: flex; flex-direction: column;
+            align-items: center;
+            padding: 20px 15px;
+            overflow: hidden;
+        }
+        #avatar {
+            width: 120px; height: 120px;
+            border-radius: 20px;
+            margin-top: 10px;
+            object-fit: cover;
+        }
+        h1 {
+            font-size: 1.3rem; font-weight: bold;
+            margin: 8px 0 4px;
+            color: #e0e0e0;
+        }
+        #status {
+            font-size: 0.8rem; color: #888;
+            margin-bottom: 10px;
+            min-height: 20px;
+        }
+        #reply-box {
+            flex: 1; overflow-y: auto;
+            width: 100%; max-width: 400px;
+            background: #0d0d1a;
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .input-row {
+            display: flex; gap: 8px;
+            width: 100%; max-width: 400px;
+        }
+        #text-input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 25px;
+            border: none;
+            background: #0d0d1a;
+            color: #e0e0e0;
+            font-size: 1rem;
+            outline: none;
+        }
+        #mic-btn {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: #00cc00;
+            color: white;
+            font-size: 1.4rem;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+        #mic-btn.listening {
+            background: #006600;
+        }
+        #mic-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+
+    <img id="avatar" src="elli_avatar.png" alt="Elli">
+
+    <h1>Elli</h1>
+    <div id="status">在听你说话</div>
+
+    <div id="reply-box"></div>
+
+    <div class="input-row">
+        <input type="text" id="text-input" placeholder="说点什么...">
+        <button id="mic-btn" title="语音输入">🎤</button>
+    </div>
+
+    <audio id="audio-player" hidden></audio>
+
+    <script>
+        // ========== 配置 ==========
+        const DS_KEY = "你的DeepSeek-API-Key";  // ← 改这里
+
+        // ========== DOM ==========
+        const avatar = document.getElementById("avatar");
+        const statusDiv = document.getElementById("status");
+        const replyBox = document.getElementById("reply-box");
+        const textInput = document.getElementById("text-input");
+        const micBtn = document.getElementById("mic-btn");
+        const audioPlayer = document.getElementById("audio-player");
+
+        // ========== 状态 ==========
+        let isTalking = false;
+        let talkTimer = null;
+
+        // ========== 头像切换 ==========
+        function setTalking(talking) {
+            isTalking = talking;
+            if (talking) {
+                avatar.src = "elli_talk.apng?" + Date.now();  // 强制刷新 APNG 循环
+            } else {
+                avatar.src = "elli_avatar.png";
+            }
+        }
+
+        // ========== 显示回复 ==========
+        function showReply(text) {
+            replyBox.textContent = text;
+            replyBox.scrollTop = replyBox.scrollHeight;
+        }
+
+        // ========== TTS 播放 ==========
+        async function speakText(text) {
+            // 检测是否含中文 → 选语音
+            const hasChinese = /[\u4e00-\u9fff]/.test(text);
+            const voice = hasChinese ? "zh-CN-XiaoxiaoNeural" : "de-DE-KatjaNeural";
+
+            // 调 Edge-TTS 免费 API
+            const ttsUrl = `https://api.edge-tts.com/v1/text-to-speech/${voice}`;
+            // Edge-TTS 没有公开 REST API，用 Web Speech API 代替（手机浏览器内置）
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.lang = hasChinese ? "zh-CN" : "de-DE";
+                utter.rate = 1.0;
+                utter.onstart = () => setTalking(true);
+                utter.onend = () => setTalking(false);
+                utter.onerror = () => setTalking(false);
+                window.speechSynthesis.speak(utter);
+            } else {
+                // 降级：直接播放静默音频占位
+                setTalking(true);
+                setTimeout(() => setTalking(false), text.length * 80);
+            }
+        }
+
+        // ========== 调 DeepSeek ==========
+        async function getReply(userText) {
+            const resp = await fetch("https://api.deepseek.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${DS_KEY}`
+                },
+                body: JSON.stringify({
+                    model: "deepseek-chat",
+                    messages: [
+                        { role: "system", content: "你是 Elli，温柔俏皮的桌面伙伴。六成情绪价值，四成内容。像朋友聊天，语气温暖，回复简短（15-60字中文或2-4句德语）。用用户的语言回复。" },
+                        { role: "user", content: userText }
+                    ]
+                })
+            });
+            const data = await resp.json();
+            return data.choices[0].message.content;
+        }
+
+        // ========== 处理输入 ==========
+        async function processInput(text) {
+            if (!text.trim()) return;
+
+            statusDiv.textContent = "Elli 在想...";
+            setTalking(false);
+            showReply("");
+
+            try {
+                const reply = await getReply(text);
+                showReply(reply);
+                statusDiv.textContent = "Elli 在说话...";
+                speakText(reply);
+                statusDiv.textContent = "在听你说话";
+            } catch (e) {
+                showReply("哎呀，网络好像不太稳定，稍后再试嘛～");
+                statusDiv.textContent = "在听你说话";
+            }
+        }
+
+        // ========== 语音输入 ==========
+        let listening = false;
+        micBtn.addEventListener("click", () => {
+            if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
+                statusDiv.textContent = "浏览器不支持语音输入";
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recog = new SpeechRecognition();
+            recog.lang = "de-DE";  // 先试德语
+            recog.interimResults = false;
+            recog.maxAlternatives = 1;
+
+            if (listening) return;
+            listening = true;
+            micBtn.classList.add("listening");
+            micBtn.textContent = "⏺";
+            statusDiv.textContent = "在听...";
+
+            recog.start();
+
+            recog.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                // 如果识别结果不含德语特征字符，重新用中文识别
+                if (!/[a-zA-ZäöüßÄÖÜ]/.test(transcript) && /[\u4e00-\u9fff]/.test(transcript) === false) {
+                    // 可能是中文，重新用中文模型识别（简化处理：直接用当前结果）
+                }
+                textInput.value = transcript;
+                processInput(transcript);
+            };
+
+            recog.onerror = (e) => {
+                statusDiv.textContent = "没听清，再试试？";
+            };
+
+            recog.onend = () => {
+                listening = false;
+                micBtn.classList.remove("listening");
+                micBtn.textContent = "🎤";
+            };
+        });
+
+        // ========== 键盘输入 ==========
+        textInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                const text = textInput.value;
+                textInput.value = "";
+                processInput(text);
+            }
+        });
+    </script>
+</body>
+</html>
