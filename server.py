@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-DS_KEY = "sk-55a20393dd0242688201400cbe7d3f72"
+DS_KEY = os.environ.get("DS_key")
 client = OpenAI(api_key=DS_KEY, base_url="https://api.deepseek.com")
 
 @app.route("/chat", methods=["POST"])
