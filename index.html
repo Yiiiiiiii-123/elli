@@ -131,6 +131,16 @@
         }
 
         // ========== 头像双击抖动 ==========
+        let pressTimer;
+        avatar.addEventListener("touchstart", (e) => {
+            pressTimer = setTimeout(() => {
+                avatar.classList.add("avatar-shake");
+                setTimeout(() => avatar.classList.remove("avatar-shake"), 300);
+            }, 500);
+        });
+        avatar.addEventListener("touchend", () => clearTimeout(pressTimer));
+        avatar.addEventListener("touchmove", () => clearTimeout(pressTimer));
+
         avatar.addEventListener("dblclick", () => {
             avatar.classList.add("avatar-shake");
             setTimeout(() => avatar.classList.remove("avatar-shake"), 300);
