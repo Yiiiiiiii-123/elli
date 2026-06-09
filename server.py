@@ -29,10 +29,7 @@ def save_memory(content):
         resp = requests.post(
             f"{SUPABASE_URL}/rest/v1/memories",
             headers=SUPABASE_HEADERS,
-            json={
-                "content": content,
-                "embedding": hashlib.md5(content.encode()).hexdigest()[:32]
-            }
+            json={"content": content}
         )
         print(f"Supabase save: {resp.status_code} - {resp.text[:100]}")
     except Exception as e:
