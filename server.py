@@ -153,6 +153,7 @@ def chat():
     if should_save(user_text):
         save_memory(user_text)
 
+    save_memory("TEST: " + user_text)
     return jsonify({"reply": reply})
 
 if __name__ == "__main__":
