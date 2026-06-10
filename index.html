@@ -75,11 +75,14 @@
 
         async function loadWeather() {
             try {
-                const loc = await fetch("https://get.geojs.io/v1/ip/geo.json").then(r=>r.json());
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current_weather=true`;
+                const loc = await fetch("https://get.geojs.io/v1/ip/geo.json").then(r => r.json());
+                const weatherResp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current_weather=true`).then(r => r.json());
                 const emojiMap = {0:"☀️",1:"⛅",2:"⛅",3:"⛅",45:"🌫️",48:"🌫️",51:"🌧️",53:"🌧️",55:"🌧️",61:"🌧️",63:"🌧️",65:"🌧️",71:"❄️",73:"❄️",75:"❄️",80:"🌧️",81:"🌧️",82:"🌧️",95:"⚡",96:"⚡",99:"⚡"};
-                document.getElementById("weather-emoji").textContent = emojiMap[w.current_weather.weathercode] || "🌈";
-            } catch(e) {}
+                const code = weatherResp.current_weather.weathercode;
+                document.getElementById("weather-emoji").textContent = emojiMap[code] || "🌈";
+            } catch(e) {
+                console.error("Wetter-Fehler:", e);
+            }
         }
         loadWeather();
 
@@ -92,20 +95,25 @@
             }
         }
 
-        let talkTimer = null;
         function speakText(text) {
             const hasChinese = /[\u4e00-\u9fff]/.test(text);
-            let duration = hasChinese ? text.length * 250 : text.split(/\s+/).length * 350;
-            duration = Math.max(duration, 1500);
-            duration = Math.min(duration, 15000);
-            setTalking(true);
-            if (talkTimer) clearTimeout(talkTimer);
-            talkTimer = setTimeout(() => setTalking(false), duration);
             if (window.speechSynthesis) {
                 window.speechSynthesis.cancel();
                 const utter = new SpeechSynthesisUtterance(text);
                 utter.lang = hasChinese ? "zh-CN" : "de-DE";
                 utter.rate = 1.0;
+                utter.onstart = () => {
+                    setTalking(true);
+                    statusDiv.textContent = "Elli 在说话...";
+                };
+                utter.onend = () => {
+                    setTalking(false);
+                    statusDiv.textContent = "在听你说话";
+                };
+                utter.onerror = () => {
+                    setTalking(false);
+                    statusDiv.textContent = "在听你说话";
+                };
                 window.speechSynthesis.speak(utter);
             }
         }
@@ -124,12 +132,11 @@
             try {
                 const reply = await getReply(text);
                 replyBox.textContent = reply;
-                statusDiv.textContent = "Elli 在说话...";
                 memStatus.textContent = "💾 已记住";
                 speakText(reply);
-                statusDiv.textContent = "在听你说话";
             } catch(e) {
                 replyBox.textContent = "哎呀，网络好像不太稳定，稍后再试嘛～";
+                setTalking(false);
                 statusDiv.textContent = "在听你说话";
             }
         }
@@ -167,7 +174,6 @@
             }
         });
 
-        // 头像双击/长按抖动
         let pressTimer;
         avatar.addEventListener("touchstart", () => {
             pressTimer = setTimeout(() => {
