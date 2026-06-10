@@ -2,40 +2,77 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Elli</title>
     <link rel="manifest" href="manifest.json">
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        body{background:#1a1a2e;color:#e0e0e0;font-family:-apple-system,"Microsoft YaHei",sans-serif;height:100vh;height:100dvh;display:flex;flex-direction:column;align-items:center;padding:20px 15px;overflow:hidden}
-        .avatar-container{position:relative;display:flex;align-items:flex-start;justify-content:center;margin-top:10px}
-        #avatar{width:120px;height:120px;border-radius:20px;object-fit:cover;cursor:pointer}
-        #weather-emoji{font-size:1.5rem;margin-left:-10px;margin-top:5px;background:#1a1a2e;border-radius:50%;padding:2px;z-index:2}
-        h1{font-size:1.3rem;font-weight:bold;margin:8px 0 4px;color:#e0e0e0}
-        #status{font-size:.8rem;color:#888;margin-bottom:4px;min-height:20px}
-        #memory-status{font-size:.7rem;color:#666;margin-bottom:6px;min-height:16px}
-        #reply-box{flex:1;overflow-y:auto;width:100%;max-width:400px;background:#0d0d1a;border-radius:16px;padding:12px;margin-bottom:10px;font-size:.95rem;line-height:1.5;white-space:pre-wrap;word-break:break-word}
-        .input-row{display:flex;gap:8px;width:100%;max-width:400px}
-        #text-input{flex:1;padding:12px;border-radius:25px;border:none;background:#0d0d1a;color:#e0e0e0;font-size:1rem;outline:none}
-        #mic-btn{width:50px;height:50px;border-radius:50%;border:none;background:#00cc00;color:#fff;font-size:1.4rem;cursor:pointer;flex-shrink:0;transition:background .2s}
+        body{
+            background:#1a1a2e;color:#e0e0e0;
+            font-family:-apple-system,"Microsoft YaHei",sans-serif;
+            height:100vh;height:100dvh;
+            display:flex;flex-direction:column;
+            overflow:hidden;
+        }
+        #top-bar{
+            display:flex;flex-direction:column;
+            align-items:center;justify-content:center;
+            padding:15px 15px 5px;
+            flex-shrink:0;
+            background:#1a1a2e;
+        }
+        .avatar-container{position:relative;display:flex;align-items:flex-start;justify-content:center}
+        #avatar{width:100px;height:100px;border-radius:20px;object-fit:cover;cursor:pointer}
+        #weather-emoji{font-size:1.3rem;margin-left:-8px;margin-top:3px;background:#1a1a2e;border-radius:50%;padding:2px;z-index:2}
+        h1{font-size:1.1rem;font-weight:bold;margin:6px 0 2px;color:#e0e0e0}
+        #status{font-size:.75rem;color:#888;min-height:18px}
+        #memory-status{font-size:.7rem;color:#666;min-height:16px}
+
+        #reply-box{
+            flex:1;overflow-y:auto;
+            background:#0d0d1a;border-radius:16px;
+            padding:12px;margin:8px 15px;
+            font-size:.95rem;line-height:1.5;
+            white-space:pre-wrap;word-break:break-word;
+        }
+        #bottom-bar{
+            display:flex;gap:8px;
+            padding:8px 15px 20px;
+            flex-shrink:0;
+            background:#1a1a2e;
+        }
+        #text-input{
+            flex:1;padding:12px;border-radius:25px;
+            border:none;background:#0d0d1a;
+            color:#e0e0e0;font-size:1rem;outline:none;
+        }
+        #mic-btn{
+            width:48px;height:48px;border-radius:50%;
+            border:none;background:#00cc00;color:#fff;
+            font-size:1.3rem;cursor:pointer;flex-shrink:0;
+            transition:background .2s;
+        }
         #mic-btn.listening{background:#006600}
         #mic-btn:active{transform:scale(.95)}
+
         @keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-5px)}100%{transform:translateX(0)}}
         .avatar-shake{animation:shake .3s ease-in-out}
     </style>
 </head>
 <body>
-    <div class="avatar-container">
-        <img id="avatar" src="elli_avatar.png" alt="Elli">
-        <span id="weather-emoji"></span>
+    <div id="top-bar">
+        <div class="avatar-container">
+            <img id="avatar" src="elli_avatar.png" alt="Elli">
+            <span id="weather-emoji"></span>
+        </div>
+        <h1>Elli</h1>
+        <div id="status">在听你说话</div>
+        <div id="memory-status">✨ 初次见面</div>
     </div>
-    <h1>Elli</h1>
-    <div id="status">在听你说话</div>
-    <div id="memory-status">✨ 初次见面</div>
     <div id="reply-box"></div>
-    <div class="input-row">
+    <div id="bottom-bar">
         <input type="text" id="text-input" placeholder="说点什么...">
         <button id="mic-btn" title="语音输入">🎤</button>
     </div>
@@ -80,9 +117,7 @@
                 const emojiMap = {0:"☀️",1:"⛅",2:"⛅",3:"⛅",45:"🌫️",48:"🌫️",51:"🌧️",53:"🌧️",55:"🌧️",61:"🌧️",63:"🌧️",65:"🌧️",71:"❄️",73:"❄️",75:"❄️",80:"🌧️",81:"🌧️",82:"🌧️",95:"⚡",96:"⚡",99:"⚡"};
                 const code = weatherResp.current_weather.weathercode;
                 document.getElementById("weather-emoji").textContent = emojiMap[code] || "🌈";
-            } catch(e) {
-                console.error("Wetter-Fehler:", e);
-            }
+            } catch(e) {}
         }
         loadWeather();
 
