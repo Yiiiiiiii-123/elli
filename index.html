@@ -28,7 +28,7 @@
 </head>
 <body>
     <div class="avatar-container">
-        <img id="avatar" src="elli_eat.apng" alt="Elli">
+        <img id="avatar" src="elli_avatar.apng" alt="Elli">
         <span id="weather-emoji"></span>
     </div>
     <h1>Elli</h1>
@@ -49,7 +49,7 @@
         const micBtn = document.getElementById("mic-btn");
 
         const avatarStates = {
-            idle: "elli_eat.apng",
+            idle: "elli_avatar.apng",
             think: "elli_think.apng",
             talk: "elli_talk.apng"
         };
@@ -75,8 +75,8 @@
 
         async function loadWeather() {
             try {
-                const loc = await fetch("http://ip-api.com/json/").then(r=>r.json());
-                const w = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current_weather=true`).then(r=>r.json());
+                const loc = await fetch("https://get.geojs.io/v1/ip/geo.json").then(r=>r.json());
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current_weather=true`;
                 const emojiMap = {0:"☀️",1:"⛅",2:"⛅",3:"⛅",45:"🌫️",48:"🌫️",51:"🌧️",53:"🌧️",55:"🌧️",61:"🌧️",63:"🌧️",65:"🌧️",71:"❄️",73:"❄️",75:"❄️",80:"🌧️",81:"🌧️",82:"🌧️",95:"⚡",96:"⚡",99:"⚡"};
                 document.getElementById("weather-emoji").textContent = emojiMap[w.current_weather.weathercode] || "🌈";
             } catch(e) {}
