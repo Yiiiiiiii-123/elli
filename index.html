@@ -8,173 +8,166 @@
     <title>Elli</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #1a1a2e;
-            color: #e0e0e0;
-            font-family: -apple-system, "Microsoft YaHei", sans-serif;
-            height: 100vh; height: 100dvh;
-            display: flex; flex-direction: column;
-            align-items: center;
-            padding: 20px 15px;
-            overflow: hidden;
-        }
-        .avatar-container {
-            position: relative;
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            margin-top: 10px;
-        }
-        #avatar {
-            width: 120px; height: 120px;
-            border-radius: 20px;
-            object-fit: cover;
-            cursor: pointer;
-        }
-        #weather-emoji {
-            font-size: 1.5rem;
-            margin-left: -10px;
-            margin-top: 5px;
-            background: #1a1a2e;
-            border-radius: 50%;
-            padding: 2px;
-            z-index: 2;
-        }
-        h1 {
-            font-size: 1.3rem; font-weight: bold;
-            margin: 8px 0 4px;
-            color: #e0e0e0;
-        }
-        #status {
-            font-size: 0.8rem; color: #888;
-            margin-bottom: 10px;
-            min-height: 20px;
-        }
-        #reply-box {
-            flex: 1; overflow-y: auto;
-            width: 100%; max-width: 400px;
-            background: #0d0d1a;
-            border-radius: 16px;
-            padding: 12px;
-            margin-bottom: 10px;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-        .input-row {
-            display: flex; gap: 8px;
-            width: 100%; max-width: 400px;
-        }
-        #text-input {
-            flex: 1;
-            padding: 12px;
-            border-radius: 25px;
-            border: none;
-            background: #0d0d1a;
-            color: #e0e0e0;
-            font-size: 1rem;
-            outline: none;
-        }
-        #mic-btn {
-            width: 50px; height: 50px;
-            border-radius: 50%;
-            border: none;
-            background: #00cc00;
-            color: white;
-            font-size: 1.4rem;
-            cursor: pointer;
-            flex-shrink: 0;
-            transition: background 0.2s;
-        }
-        #mic-btn.listening {
-            background: #006600;
-        }
-        #mic-btn:active {
-            transform: scale(0.95);
-        }
-
-        @keyframes shake {
-            0% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            50% { transform: translateX(5px); }
-            75% { transform: translateX(-5px); }
-            100% { transform: translateX(0); }
-        }
-        .avatar-shake {
-            animation: shake 0.3s ease-in-out;
-        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:#1a1a2e;color:#e0e0e0;font-family:-apple-system,"Microsoft YaHei",sans-serif;height:100vh;height:100dvh;display:flex;flex-direction:column;align-items:center;padding:20px 15px;overflow:hidden}
+        .avatar-container{position:relative;display:flex;align-items:flex-start;justify-content:center;margin-top:10px}
+        #avatar{width:120px;height:120px;border-radius:20px;object-fit:cover;cursor:pointer}
+        #weather-emoji{font-size:1.5rem;margin-left:-10px;margin-top:5px;background:#1a1a2e;border-radius:50%;padding:2px;z-index:2}
+        h1{font-size:1.3rem;font-weight:bold;margin:8px 0 4px;color:#e0e0e0}
+        #status{font-size:.8rem;color:#888;margin-bottom:4px;min-height:20px}
+        #memory-status{font-size:.7rem;color:#666;margin-bottom:6px;min-height:16px}
+        #reply-box{flex:1;overflow-y:auto;width:100%;max-width:400px;background:#0d0d1a;border-radius:16px;padding:12px;margin-bottom:10px;font-size:.95rem;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+        .input-row{display:flex;gap:8px;width:100%;max-width:400px}
+        #text-input{flex:1;padding:12px;border-radius:25px;border:none;background:#0d0d1a;color:#e0e0e0;font-size:1rem;outline:none}
+        #mic-btn{width:50px;height:50px;border-radius:50%;border:none;background:#00cc00;color:#fff;font-size:1.4rem;cursor:pointer;flex-shrink:0;transition:background .2s}
+        #mic-btn.listening{background:#006600}
+        #mic-btn:active{transform:scale(.95)}
+        @keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-5px)}100%{transform:translateX(0)}}
+        .avatar-shake{animation:shake .3s ease-in-out}
     </style>
 </head>
 <body>
-
     <div class="avatar-container">
-        <img id="avatar" src="elli_avatar.png" alt="Elli">
+        <img id="avatar" src="elli_eat.apng" alt="Elli">
         <span id="weather-emoji"></span>
     </div>
-
     <h1>Elli</h1>
     <div id="status">在听你说话</div>
-
+    <div id="memory-status">✨ 初次见面</div>
     <div id="reply-box"></div>
-
     <div class="input-row">
         <input type="text" id="text-input" placeholder="说点什么...">
         <button id="mic-btn" title="语音输入">🎤</button>
     </div>
-
-    <audio id="audio-player" hidden></audio>
-
     <script>
-        // ========== 配置 ==========
         const SERVER_URL = "https://elli-7mth.onrender.com/chat";
-
-        // ========== DOM ==========
         const avatar = document.getElementById("avatar");
         const statusDiv = document.getElementById("status");
+        const memStatus = document.getElementById("memory-status");
         const replyBox = document.getElementById("reply-box");
         const textInput = document.getElementById("text-input");
         const micBtn = document.getElementById("mic-btn");
 
-        // ========== 天气 ==========
+        const avatarStates = {
+            idle: "elli_eat.apng",
+            think: "elli_think.apng",
+            talk: "elli_talk.apng"
+        };
+        const idleVariants = ["elli_selfie.apng"];
+        let avatarState = "idle";
+        let idleTimer = null;
+
+        function setAvatarState(state) {
+            if (avatarStates[state]) {
+                avatar.src = avatarStates[state] + "?" + Date.now();
+                avatarState = state;
+            }
+        }
+
+        function randomIdleVariant() {
+            if (avatarState === "idle" && Math.random() < 0.3) {
+                avatar.src = idleVariants[0] + "?" + Date.now();
+                setTimeout(() => { if (avatarState === "idle") setAvatarState("idle"); }, 5000);
+            }
+            idleTimer = setTimeout(randomIdleVariant, 30000);
+        }
+        idleTimer = setTimeout(randomIdleVariant, 30000);
+
         async function loadWeather() {
             try {
-                const loc = await fetch("http://ip-api.com/json/").then(r => r.json());
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current_weather=true`;
-                const w = await fetch(url).then(r => r.json());
-                const code = w.current_weather.weathercode;
-                const emojiMap = {
-                    0: "☀️", 1: "⛅", 2: "⛅", 3: "⛅",
-                    45: "🌫️", 48: "🌫️",
-                    51: "🌧️", 53: "🌧️", 55: "🌧️", 56: "🌧️", 57: "🌧️",
-                    61: "🌧️", 63: "🌧️", 65: "🌧️", 66: "🌧️", 67: "🌧️",
-                    71: "❄️", 73: "❄️", 75: "❄️", 77: "❄️",
-                    80: "🌧️", 81: "🌧️", 82: "🌧️",
-                    95: "⚡", 96: "⚡", 99: "⚡",
-                };
-                document.getElementById("weather-emoji").textContent = emojiMap[code] || "🌈";
-            } catch(e) {
-                document.getElementById("weather-emoji").textContent = "🌈";
-            }
+                const loc = await fetch("http://ip-api.com/json/").then(r=>r.json());
+                const w = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current_weather=true`).then(r=>r.json());
+                const emojiMap = {0:"☀️",1:"⛅",2:"⛅",3:"⛅",45:"🌫️",48:"🌫️",51:"🌧️",53:"🌧️",55:"🌧️",61:"🌧️",63:"🌧️",65:"🌧️",71:"❄️",73:"❄️",75:"❄️",80:"🌧️",81:"🌧️",82:"🌧️",95:"⚡",96:"⚡",99:"⚡"};
+                document.getElementById("weather-emoji").textContent = emojiMap[w.current_weather.weathercode] || "🌈";
+            } catch(e) {}
         }
         loadWeather();
 
-        // ========== 头像切换 ==========
-        let talkTimer = null;
-        function setTalking(talking) {
-            if (talking) {
-                // 每次说话都重新加载 APNG，确保从第一帧开始
-                avatar.src = "elli_talk.apng?" + Date.now();
+        function setTalking(t) {
+            if (t) {
+                setAvatarState("talk");
+                if (navigator.vibrate) navigator.vibrate(50);
             } else {
-                avatar.src = "elli_avatar.png";
-                if (talkTimer) {
-                    clearTimeout(talkTimer);
-                    talkTimer = null;
-                }
+                setAvatarState("idle");
             }
         }
-        // ========== 头像交互：桌面双击 / 手机长按 ==========
+
+        let talkTimer = null;
+        function speakText(text) {
+            const hasChinese = /[\u4e00-\u9fff]/.test(text);
+            let duration = hasChinese ? text.length * 250 : text.split(/\s+/).length * 350;
+            duration = Math.max(duration, 1500);
+            duration = Math.min(duration, 15000);
+            setTalking(true);
+            if (talkTimer) clearTimeout(talkTimer);
+            talkTimer = setTimeout(() => setTalking(false), duration);
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.lang = hasChinese ? "zh-CN" : "de-DE";
+                utter.rate = 1.0;
+                window.speechSynthesis.speak(utter);
+            }
+        }
+
+        async function getReply(userText) {
+            const resp = await fetch(SERVER_URL, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:userText})});
+            const data = await resp.json();
+            return data.reply;
+        }
+
+        async function processInput(text) {
+            if (!text.trim()) return;
+            statusDiv.textContent = "Elli 在想...";
+            setAvatarState("think");
+            replyBox.textContent = "";
+            try {
+                const reply = await getReply(text);
+                replyBox.textContent = reply;
+                statusDiv.textContent = "Elli 在说话...";
+                memStatus.textContent = "💾 已记住";
+                speakText(reply);
+                statusDiv.textContent = "在听你说话";
+            } catch(e) {
+                replyBox.textContent = "哎呀，网络好像不太稳定，稍后再试嘛～";
+                statusDiv.textContent = "在听你说话";
+            }
+        }
+
+        let listening = false;
+        micBtn.addEventListener("click", () => {
+            if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) return;
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recog = new SpeechRecognition();
+            recog.lang = "de-DE"; recog.interimResults = false; recog.maxAlternatives = 1;
+            if (listening) return;
+            listening = true;
+            micBtn.classList.add("listening");
+            micBtn.textContent = "⏺";
+            statusDiv.textContent = "在听...";
+            recog.start();
+            recog.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                textInput.value = transcript;
+                processInput(transcript);
+            };
+            recog.onerror = () => { statusDiv.textContent = "没听清，再试试？"; };
+            recog.onend = () => {
+                listening = false;
+                micBtn.classList.remove("listening");
+                micBtn.textContent = "🎤";
+            };
+        });
+
+        textInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                const text = textInput.value;
+                textInput.value = "";
+                processInput(text);
+            }
+        });
+
+        // 头像双击/长按抖动
         let pressTimer;
         avatar.addEventListener("touchstart", () => {
             pressTimer = setTimeout(() => {
@@ -184,122 +177,9 @@
         });
         avatar.addEventListener("touchend", () => clearTimeout(pressTimer));
         avatar.addEventListener("touchmove", () => clearTimeout(pressTimer));
-
         avatar.addEventListener("dblclick", () => {
             avatar.classList.add("avatar-shake");
             setTimeout(() => avatar.classList.remove("avatar-shake"), 300);
-        });
-
-        // ========== 显示回复 ==========
-        function showReply(text) {
-            replyBox.textContent = text;
-            replyBox.scrollTop = replyBox.scrollHeight;
-        }
-
-        // ========== TTS 播放 ==========
-        function speakText(text) {
-            // 估算播放时长：中文约 4 字/秒，德语约 3 词/秒
-            const hasChinese = /[\u4e00-\u9fff]/.test(text);
-            let duration;
-            if (hasChinese) {
-                duration = text.length * 250; // 每字 250ms
-            } else {
-                duration = text.split(/\s+/).length * 350; // 每词 350ms
-            }
-            duration = Math.max(duration, 1500); // 最短 1.5 秒
-            duration = Math.min(duration, 15000); // 最长 15 秒
-
-            // 用定时器控制 APNG，不依赖 TTS 回调
-            setTalking(true);
-            if (talkTimer) clearTimeout(talkTimer);
-            talkTimer = setTimeout(() => setTalking(false), duration);
-
-            // TTS 仍然播放，只是不控制动画
-            if (window.speechSynthesis) {
-                window.speechSynthesis.cancel();
-                const utter = new SpeechSynthesisUtterance(text);
-                utter.lang = hasChinese ? "zh-CN" : "de-DE";
-                utter.rate = 1.0;
-                window.speechSynthesis.speak(utter);
-            }
-        }
-        // ========== 调 Render 后端 ==========
-        async function getReply(userText) {
-            const resp = await fetch(SERVER_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: userText })
-            });
-            const data = await resp.json();
-            return data.reply;
-        }
-
-        // ========== 处理输入 ==========
-        async function processInput(text) {
-            if (!text.trim()) return;
-
-            statusDiv.textContent = "Elli 在想...";
-            setTalking(false);
-            showReply("");
-
-            try {
-                const reply = await getReply(text);
-                showReply(reply);
-                statusDiv.textContent = "Elli 在说话...";
-                speakText(reply);
-                statusDiv.textContent = "在听你说话";
-            } catch (e) {
-                showReply("哎呀，网络好像不太稳定，稍后再试嘛～");
-                statusDiv.textContent = "在听你说话";
-            }
-        }
-
-        // ========== 语音输入 ==========
-        let listening = false;
-        micBtn.addEventListener("click", () => {
-            if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
-                statusDiv.textContent = "浏览器不支持语音输入";
-                return;
-            }
-
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            const recog = new SpeechRecognition();
-            recog.lang = "de-DE";
-            recog.interimResults = false;
-            recog.maxAlternatives = 1;
-
-            if (listening) return;
-            listening = true;
-            micBtn.classList.add("listening");
-            micBtn.textContent = "⏺";
-            statusDiv.textContent = "在听...";
-
-            recog.start();
-
-            recog.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                textInput.value = transcript;
-                processInput(transcript);
-            };
-
-            recog.onerror = () => {
-                statusDiv.textContent = "没听清，再试试？";
-            };
-
-            recog.onend = () => {
-                listening = false;
-                micBtn.classList.remove("listening");
-                micBtn.textContent = "🎤";
-            };
-        });
-
-        // ========== 键盘输入 ==========
-        textInput.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-                const text = textInput.value;
-                textInput.value = "";
-                processInput(text);
-            }
         });
     </script>
 </body>
